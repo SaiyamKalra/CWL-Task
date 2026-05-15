@@ -1,0 +1,10 @@
+import {Router} from "express";
+import * as UserController from "../controllers/employee.controller.js";
+const route=Router();
+route.post('/createUser',UserController.createUser);
+route.post('/login',UserController.loginUser);
+route.get('/getUser/:id',UserController.getSingleUserDetails);
+route.get('/getAllUser/:id',UserController.getAllUserDetails);
+route.patch('/updateUser/:id',UserController.updateUser);
+route.delete('/deleteUser/:adminId/:targetId',UserController.deleteUser);
+export default route;

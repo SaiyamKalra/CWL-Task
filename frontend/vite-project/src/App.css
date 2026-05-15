@@ -1,0 +1,81 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #121212;
+  color: white;
+  font-family: sans-serif;
+}
+
+.auth-card {
+  background: #1e1e1e;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 350px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+  gap: 10px;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: #333;
+  color: white;
+  cursor: pointer;
+}
+
+.tabs button.active {
+  background: #646cff;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+input,
+select {
+  padding: 12px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: white;
+  border-radius: 6px;
+}
+
+button[type="submit"] {
+  padding: 12px;
+  background: #646cff;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.card {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #646cff;
+}
+
+.badge {
+  font-size: 0.7rem;
+  background: #444;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
