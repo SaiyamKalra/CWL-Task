@@ -164,11 +164,9 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      {/* Decorative Blur Backdrops */}
       <div className="ambient-blur blur-one"></div>
       <div className="ambient-blur blur-two"></div>
 
-      {/* Premium Top Navbar */}
       <nav className="fixed-navbar">
         <div className="nav-logo">
           CoreDash <span className="logo-badge">PRO</span>
@@ -192,12 +190,10 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* Main Combined Content Block wrapper Container */}
       <main className="dashboard-content">
         <div className="welcome-card animated-border-box">
           <div className="glow-effect"></div>
 
-          {/* Welcome Message Section Header */}
           <div className="welcome-header-block">
             <h1 className="welcome-heading">
               Welcome Back,{" "}
@@ -207,7 +203,6 @@ export default function Dashboard() {
 
           <hr className="premium-divider" />
 
-          {/* Directory Header Section (No search bar input field) */}
           <div className="directory-toolbar">
             <div className="toolbar-headline-meta">
               <h3>Team Directory</h3>
@@ -217,7 +212,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Dynamic Editing Inline Panel Overlay */}
           {editingId && (
             <form
               onSubmit={handleUpdate}
@@ -264,7 +258,6 @@ export default function Dashboard() {
             </form>
           )}
 
-          {/* Responsive Modern Grid / Cards Interface Ledger List display layout system */}
           <div className="users-scroll-window custom-scrollbar">
             {users.length === 0 ? (
               <div className="empty-directory-fallback">
@@ -288,7 +281,6 @@ export default function Dashboard() {
                     >
                       <div className="card-top-accent"></div>
 
-                      {/* Meta Profile Structure Elements Header Wrapper */}
                       <div className="card-user-info-row">
                         <div className="card-avatar-wrapper">
                           <div
@@ -314,7 +306,6 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {/* Descriptive details content body */}
                       <div className="card-meta-details-body">
                         <div className="meta-detail-row">
                           <span className="meta-detail-label">
@@ -337,7 +328,6 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {/* Card Operational Administrative Action Footers Toolbar Section */}
                       <div className="card-actions-footer">
                         <button
                           className="action-btn-pill edit-pill"
