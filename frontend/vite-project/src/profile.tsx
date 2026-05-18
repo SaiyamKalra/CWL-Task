@@ -1,94 +1,92 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./userManagement.css"; // Reusing core CSS definitions
-
+import "./profile.css";
 export default function Profile() {
-  const navigate = useNavigate();
-
-  interface user {
+  interface User {
     _id: string;
     name: string;
     email: string;
-    role?: string;
+    role: string;
+    number: string;
   }
-  const [loggedInUser, setLoggedInUser] = useState<user | null>(null);
+  const navigate = useNavigate();
+  const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const fetchLoggedInUser = async () => {
     const userString = localStorage.getItem("user");
-    if (!userString || userString == "undefined") {
-      console.error("User data not found please login");
+    if (!userString) {
+      console.error("user not logged in");
+      setIsLoading(false);
       return;
     }
     try {
-      const currUser = JSON.parse(userString);
-      const id = currUser._id;
-      if (!id) {
-        console.log("User not found");
+      const user = JSON.parse(userString);
+      const userId = user._id || user.id;
+      if (!userId) {
+        console.error("User not logged in");
+        setIsLoading(false);
         return;
       }
-      const res = await fetch(`http://localhost:5000/getUser/${id}`, {
+      const res = await fetch(`http://localhost:5000/getUser/${userId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
       });
+
       if (!res.ok) {
-        throw new Error(`Server respond with status ${res.status}`);
+        console.error("Server error");
+        setIsLoading(false);
+        return;
       }
       const data = await res.json();
-      setLoggedInUser(data.user || data);
+      const userData = data.user || data;
+      setLoggedInUser(userData);
+      setIsLoading(false);
     } catch (err) {
       console.error(err);
+      setIsLoading(false);
+      return;
     }
+  };
+  const handleBack = () => {
+    navigate("/users");
   };
   useEffect(() => {
     fetchLoggedInUser();
   }, []);
+  if (isLoading) {
+    return (
+      <div className="failedLoggedInUser">
+        <h4>You are not allowed in this website</h4>
+      </div>
+    );
+  }
   if (!loggedInUser) {
     return (
-      <div
-        className="dashboard-container"
-        style={{ justifyContent: "center", alignItems: "center" }}
-      >
-        <div className="loading-spinner" style={{ color: "var(--text-main)" }}>
-          Loading profile data...
-        </div>
+      <div className="failedLoggedInUser">
+        <h4 style={{ color: "#ef4444" }}>Access Denied. Please log in.</h4>
       </div>
     );
   }
   return (
-    <div
-      className="dashboard-container"
-      style={{
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "2rem",
-      }}
-    >
-      <div className="welcome-card" style={{ maxWidth: "460px" }}>
-        <h2 className="welcome-heading" style={{ fontSize: "2rem" }}>
-          {loggedInUser.name}'s Profile
-        </h2>
-        <h4 className="welcome-subtext">Email ID:- {loggedInUser.email}</h4>
-        <h4 className="welcome-subtext" style={{ marginBottom: "2rem" }}>
-          Role:- {loggedInUser.role}
-        </h4>
-        <button
-          onClick={() => navigate("/users")}
-          style={{
-            background: "var(--accent-color)",
-            color: "white",
-            border: "none",
-            padding: "0.75rem 1.5rem",
-            borderRadius: "8px",
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "opacity 0.2s",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-        >
-          Return to Dashboard
-        </button>
+    <div className="fullPage">
+      <div className="alignMain">
+        <div className="profileMain">
+          <h4>{loggedInUser.name.charAt(0).toUpperCase()}</h4>
+        </div>
+      </div>
+      <div className="card-box">
+        <div className="card">
+          <h4>{loggedInUser.name}</h4>
+          <h4>{loggedInUser.email}</h4>
+          <h4>{loggedInUser.number}</h4>
+          <h4>{loggedInUser.role}</h4>
+
+          <div className="button" onClick={handleBack}>
+            <h4>Return to Dashboard</h4>
+          </div>
+        </div>
       </div>
     </div>
   );

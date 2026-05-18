@@ -1,17 +1,42 @@
 import {Request,Response,NextFunction} from "express";
 import UserService from "../service/user.service.js";
-import { UserRole } from "../model/user.model.js";
-export const createUser=async(req:Request,res:Response,next:NextFunction)=>{
-    try{
-        const {emailId,name,password,role}=req.body;
-        const foundUser=await UserService.registerUser(name,emailId,password,role);
-        res.status(200).send("Inserted successfully");
+import User, { UserRole } from "../model/user.model.js";
+export const createUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id as string | undefined;
+        const { emailId, name, password, role,number } = req.body;
+
+        if (!id) {
+            if (role !== "admin") {
+                res.status(400).json({
+                    message: "You will be first verified by the admin",
+                });
+                return;
+            }
+            
+            res.status(403).json({
+                message: "Access denied. Cannot self-register an administrator account.",
+            });
+            return;
+        }
+
+        const roleCheck = await UserService.checkRole(id);
+        
+        if (roleCheck !== "admin") {
+            res.status(400).json({
+                message: "access denied",
+            });
+            return;
+        }
+
+        const foundUser = await UserService.registerUser(name, emailId, password, role,number);
+        res.status(200).json({ "message": "Inserted successfully", "response": foundUser });
     }
-    catch (error){
-        console.log("Not an Admin");
+    catch (error) {
+        console.error("Error creating user:", error);
         next(error);
     }
-}
+};
 
 export const loginUser=async(req:Request,res:Response,next:NextFunction)=>{
     try{
@@ -32,39 +57,39 @@ export const loginUser=async(req:Request,res:Response,next:NextFunction)=>{
         console.error(err);
         return res.status(500).send("Internal server Error");
     }
-}
-export const updateUser=async(req:Request,res:Response,next:NextFunction)=>{
-    try{
-        const id=req.params.id as string;
-        const {name,role}=req.body;
-        const checkUser=await UserService.checkExistingUser(id);
-        if(!checkUser){
-            return res.status(404).json({
-                error:"user not found",
-            })
-        }
-        if(!name){
-            return res.status(400).json({
-                error:"New name is not given",
-            })
-        }
-        const successUpdate=await UserService.updateUser(id,name,role);
-        
-        if(!successUpdate){
-            return res.status(500).json({
-                error:"internal error",
-            })
-        }
-         return res.status(200).json({
-            status:true,
-            message:'data updated successfully',
-            user:{role:successUpdate.role,username:successUpdate.name},
-        })
     }
-    catch(err){
-        return res.status(500).send("internal server error");
+    export const updateUser=async(req:Request,res:Response,next:NextFunction)=>{
+        try{
+            const id=req.params.id as string;
+            const {name,role,number}=req.body;
+            const checkUser=await UserService.checkExistingUser(id);
+            if(!checkUser){
+                return res.status(404).json({
+                    error:"user not found",
+                })
+            }
+            if(!name){
+                return res.status(400).json({
+                    error:"New name is not given",
+                })
+            }
+            const successUpdate=await UserService.updateUser(id,name,role,number);
+            
+            if(!successUpdate){
+                return res.status(500).json({
+                    error:"internal error",
+                })
+            }
+            return res.status(200).json({
+                status:true,
+                message:'data updated successfully',
+                response:{role:successUpdate.role,name:successUpdate.name,number:successUpdate.number},
+            })
+        }
+        catch(err){
+            return res.status(500).send("internal server error");
+        }
     }
-}
 
 export const getSingleUserDetails=async(req:Request,res:Response)=>{
     try{
@@ -80,6 +105,7 @@ export const getSingleUserDetails=async(req:Request,res:Response)=>{
             name:getUser.name,
             email:getUser.emailId,
             role:getUser.role,
+            number:getUser.number,
         })
     }
     catch(err){

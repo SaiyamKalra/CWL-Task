@@ -12,6 +12,7 @@ export interface IUser extends Document {
     name: string;
     role: UserRole;
     password: string;
+    number: string;
     comparePassword(userPassword: string): Promise<boolean>;
 }
 
@@ -37,6 +38,15 @@ const userSchema=new Schema({
         required:true,
         select:false,
     },
+    number:{
+        type:String,
+        required:true,
+    },
+    isValidated:{
+        type:Boolean,
+        required:true,
+        default:0,
+    }
 },{timestamps:true});
 
 userSchema.pre('save',async function(){

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import "./App.css";
 const Login = () => {
   const [view, setView] = useState<"login" | "register">("login");
   const [emailId, setEmailId] = useState("");
@@ -8,6 +8,7 @@ const Login = () => {
   const [name, setName] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
+  const [regNumber, setRegNumber] = useState("");
   const [role, setRole] = useState("employee");
   const navigate = useNavigate();
 
@@ -47,7 +48,8 @@ const Login = () => {
           name,
           emailId: regEmail,
           password: regPassword,
-          role,
+          role: role || "employee",
+          number: regNumber,
         }),
       });
       const result = await response.text();
@@ -55,7 +57,7 @@ const Login = () => {
         alert("Registration Successful: " + result);
         setView("login");
       } else {
-        alert("registration failed");
+        alert("wait for approval from the admin");
       }
     } catch (err) {
       console.error("Register error:", err);
@@ -122,6 +124,13 @@ const Login = () => {
               required
               value={regPassword}
               onChange={(e) => setRegPassword(e.target.value)}
+            />
+            <input
+              type="number"
+              placeholder="Number"
+              required
+              value={regNumber}
+              onChange={(e) => setRegNumber(e.target.value)}
             />
             <select value={role} onChange={(e) => setRole(e.target.value)}>
               <option value="employee">Employee</option>

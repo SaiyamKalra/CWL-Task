@@ -1,6 +1,7 @@
 import {Router} from "express";
 import * as UserController from "../controllers/employee.controller.js";
 const route=Router();
+route.post('/createUser/:id',UserController.createUser);
 route.post('/createUser',UserController.createUser);
 route.post('/login',UserController.loginUser);
 route.get('/getUser/:id',UserController.getSingleUserDetails);

@@ -2,7 +2,6 @@ import { Routes, Route } from "react-router-dom";
 import Login from "./Login";
 import Profile from "./profile";
 import Dashboard from "./UserManagement";
-import "./App.css";
 
 function App() {
   // const navigate = useNavigate();

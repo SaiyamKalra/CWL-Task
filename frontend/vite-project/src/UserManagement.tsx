@@ -1,355 +1,471 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./userManagement.css";
-
 export default function Dashboard() {
-  const navigate = useNavigate();
-
   interface User {
     _id: string;
     name: string;
     emailId: string;
-    role?: string;
+    role: string;
+    number: string;
   }
-
-  const [users, setUsers] = useState<User[]>([]);
+  const navigate = useNavigate();
   const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
-
+  const [isLoading, setIsLoading] = useState(true);
+  const [modify, setModify] = useState(false);
+  const [allUser, setAllUser] = useState<User[]>([]);
+  const [isDashboardClicked, setIsDashboardClicked] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    role: "employee",
+    number: "",
+  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteAccount, setDeleteAccount] = useState(false);
+  const [addUserPage, setAddUserPage] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: "",
+    emailId: "",
+    password: "",
+    role: "employee",
+    number: "",
+  });
   const fetchLoggedInUser = async () => {
     const userString = localStorage.getItem("user");
-    if (!userString || userString === "undefined") {
-      console.error("No user found in storage.");
+    if (!userString) {
+      console.error("user not logged in");
+      setIsLoading(false);
       return;
     }
     try {
-      const currUser = JSON.parse(userString);
-      const id = currUser._id;
-      if (!id) {
-        console.error("Please login");
+      const user = JSON.parse(userString);
+      const userId = user._id || user.id;
+      if (!userId) {
+        console.error("User not logged in");
+        setIsLoading(false);
         return;
       }
-      const res = await fetch(`http://localhost:5000/getUser/${id}`, {
+      const res = await fetch(`http://localhost:5000/getUser/${userId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
       });
+
       if (!res.ok) {
-        throw new Error(`Server responded with status ${res.status}`);
+        console.error("Server error");
+        setIsLoading(false);
+        return;
       }
       const data = await res.json();
-      setLoggedInUser(data.user || data);
+      const userData = data.user || data;
+      setLoggedInUser(userData);
+      setIsLoading(false);
     } catch (err) {
-      console.error("failed to fetch log-in user context", err);
+      console.error(err);
+      setIsLoading(false);
+      return;
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchAllLoggedInUser = async () => {
     const userString = localStorage.getItem("user");
-    if (!userString || userString === "undefined") {
-      console.error("No user found in storage. Please log in again.");
+    if (!userString) {
+      console.error("user not logged in");
+      setIsLoading(false);
       return;
     }
     try {
-      const userObj = JSON.parse(userString);
-      const id = userObj._id || userObj.id;
-
-      const response = await fetch(`http://localhost:5000/getAllUser/${id}`);
-      const contentType = response.headers.get("content-type");
-      if (!response.ok || !contentType?.includes("application/json")) {
-        const errorText = await response.text();
-        console.error("Server Error:", errorText);
+      const user = JSON.parse(userString);
+      const userId = user._id || user.id;
+      if (!userId) {
+        console.error("User not logged in");
+        setIsLoading(false);
         return;
       }
-
-      const data = await response.json();
-      setUsers(data.getUser || []);
-    } catch (err) {
-      console.error("Failed to fetch all directory users:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchLoggedInUser();
-    fetchUsers();
-  }, []);
-
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", role: "" });
-
-  const handleDelete = async (targetId: string) => {
-    if (window.confirm("Are you sure you want to delete this user securely?")) {
-      try {
-        const userString = localStorage.getItem("user");
-        if (!userString) return;
-        const adminObj = JSON.parse(userString);
-        const adminId = adminObj._id || adminObj.id;
-
-        const response = await fetch(
-          `http://localhost:5000/deleteUser/${adminId}/${targetId}`,
-          {
-            method: "DELETE",
-          },
-        );
-
-        if (response.ok) {
-          setUsers(users.filter((u) => u._id !== targetId));
-          alert("User record deleted from database successfully.");
-        } else {
-          const errorData = await response.json();
-          alert(
-            `Error: ${errorData.message || "Could not delete execution target"}`,
-          );
-        }
-      } catch (err) {
-        console.error("Delete call failed:", err);
-        alert("System error processing user removal routing");
+      const userRole = user.role;
+      if (userRole != "admin") {
+        console.error("User not allowed to access this");
+        setIsLoading(false);
+        return;
       }
+      const res = await fetch(`http://localhost:5000/getAllUser/${userId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        console.error("Server error");
+        setIsLoading(false);
+        return;
+      }
+      const data = await res.json();
+      setAllUser(data.getUser || data.users || data || []);
+      setIsLoading(false);
+    } catch (err) {
+      console.error(err);
+      setIsLoading(false);
+      return;
     }
   };
-
-  const startEdit = (user: User) => {
-    setEditingId(user._id);
-    setEditForm({ name: user.name, role: user.role || "User" });
-  };
-
-  const handleUpdate = async (e: React.FormEvent) => {
+  const handleModification = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingId) return;
     try {
-      const response = await fetch(
-        `http://localhost:5000/updateUser/${editingId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: editForm.name,
-            role: editForm.role,
-          }),
+      const res = await fetch(`http://localhost:5000/updateUser/${editingId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
-
-      if (response.ok) {
-        setUsers(
-          users.map((u) =>
+        body: JSON.stringify({
+          name: editForm.name,
+          role: editForm.role,
+          number: editForm.number,
+        }),
+      });
+      if (res.ok) {
+        setAllUser(
+          allUser.map((u) =>
             u._id === editingId
-              ? { ...u, name: editForm.name, role: editForm.role }
+              ? {
+                  ...u,
+                  name: editForm.name,
+                  role: editForm.role,
+                  number: editForm.number,
+                }
               : u,
           ),
         );
         setEditingId(null);
-        alert("Internal ledger database records synchronized successfully!");
+        setModify(false);
+      } else {
+        console.error("Failed to update user database side");
       }
     } catch (err) {
-      alert("Operational error patch updating profile structural elements");
+      console.log(err);
+      setIsLoading(false);
+      return;
     }
   };
-
+  const handleDelete = async (targetId: string) => {
+    if (window.confirm("Are you sure you want to delete the account")) {
+      try {
+        const userString = localStorage.getItem("user");
+        if (!userString) {
+          console.error("user not logged in");
+          return;
+        }
+        const user = JSON.parse(userString);
+        const userId = user._id || user.id;
+        if (!userId) {
+          console.error("User id not found");
+          return;
+        }
+        const res = await fetch(
+          `http://localhost:5000/deleteUser/${userId}/${targetId}`,
+          {
+            method: "DELETE",
+          },
+        );
+        if (res.ok) {
+          setAllUser(allUser.filter((u) => u._id !== targetId));
+          console.log("User deleted successfully");
+          return;
+        } else {
+          const errorData = await res.json();
+          alert(`Error: ${errorData.message || "Could not delete"}`);
+        }
+      } catch (err) {
+        console.error(err);
+        return;
+      }
+    }
+  };
+  const handleAddNewUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+      console.error("user not logged in");
+      return;
+    }
+    try {
+      const user = JSON.parse(userString);
+      const userId = user._id || user.id;
+      if (!userId) {
+        console.error("user not found");
+        return;
+      }
+      const res = await fetch(`http://localhost:5000/createUser/${userId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newUser),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const savedUser = data.response || data.user || data;
+        setAllUser([...allUser, savedUser]);
+        console.log("User registered Successfully");
+        setAddUserPage(false);
+        setNewUser({
+          name: "",
+          emailId: "",
+          password: "",
+          role: "employee",
+          number: "",
+        });
+      } else {
+        const errorData = await res.json();
+        alert(
+          `Creation Failure: ${errorData.message || "Bad Request Context"}`,
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      return;
+    }
+  };
+  const handleProfile = () => {
+    navigate("/profile");
+  };
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/");
   };
-
-  const handleProfileClick = () => {
-    navigate("/profile");
+  const handleDashboard = () => {
+    setIsDashboardClicked(true);
   };
-
-  if (!loggedInUser) {
+  useEffect(() => {
+    fetchLoggedInUser();
+    fetchAllLoggedInUser();
+  }, []);
+  if (isLoading) {
     return (
-      <div className="premium-loader-container">
-        <div className="premium-spinner"></div>
-        <p>Synchronizing Secure Framework...</p>
+      <div className="failedLoggedInUser">
+        <h4>You are not allowed in this website</h4>
       </div>
     );
   }
-
   return (
-    <div className="dashboard-container">
-      <div className="ambient-blur blur-one"></div>
-      <div className="ambient-blur blur-two"></div>
-
-      <nav className="fixed-navbar">
-        <div className="nav-logo">
-          CoreDash <span className="logo-badge">PRO</span>
+    <div className="FullPage">
+      <div className="heading">
+        <div className="title">
+          <h4>CWL Project</h4>
         </div>
-
-        <div className="nav-actions">
-          <button className="logout-action-btn" onClick={handleLogout}>
-            Logout
-          </button>
-
-          <button
-            className="avatar-btn"
-            onClick={handleProfileClick}
-            aria-label="View user account metadata profile"
-          >
-            <div className="avatar-circle">
-              {loggedInUser.name.charAt(0).toUpperCase()}
-            </div>
-            <span className="tooltip">View Profile</span>
-          </button>
+        <div className="profile-access">
+          <div onClick={handleLogout}>
+            <h4 className="logout">LOG OUT</h4>
+          </div>
         </div>
-      </nav>
-
-      <main className="dashboard-content">
-        <div className="welcome-card animated-border-box">
-          <div className="glow-effect"></div>
-
-          <div className="welcome-header-block">
-            <h1 className="welcome-heading">
-              Welcome Back,{" "}
-              <span className="highlight-text">{loggedInUser.name}!</span>
-            </h1>
-          </div>
-
-          <hr className="premium-divider" />
-
-          <div className="directory-toolbar">
-            <div className="toolbar-headline-meta">
-              <h3>Team Directory</h3>
-              <span className="user-count-indicator">
-                Total: {users.length} {users.length === 1 ? "User" : "Users"}
-              </span>
+        <div className="profile" onClick={handleProfile}>
+          <h4>{loggedInUser.name.charAt(0).toUpperCase()}</h4>
+        </div>
+      </div>
+      <div className="workspace">
+        {loggedInUser!.role === "admin" && (
+          <aside className="admin-sidebar">
+            <div className="sidebarHeading">
+              <h4>Admin Options</h4>
             </div>
-          </div>
-
-          {editingId && (
-            <form
-              onSubmit={handleUpdate}
-              className="premium-glass-form animate-fade-in"
-            >
-              <h4>Modify System Account Profile Controls</h4>
-              <div className="form-fields-grid">
-                <div className="field-group">
-                  <label>Full Structural Name</label>
-                  <input
-                    type="text"
-                    value={editForm.name}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="field-group">
-                  <label>System Account Role Assignment Permission</label>
-                  <select
-                    value={editForm.role}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, role: e.target.value })
-                    }
-                  >
-                    <option value="Admin">Admin</option>
-                    <option value="Employee">Employee</option>
-                  </select>
-                </div>
+            <div className="sidebarOption" onClick={handleDashboard}>
+              <h4>Employees</h4>
+            </div>
+          </aside>
+        )}
+        <main className="main-content-alignment">
+          <div className="alignMain">
+            <div className="profileMain">
+              <h4>{loggedInUser.name.charAt(0).toUpperCase()}</h4>
+            </div>
+            <div className="alignment">
+              <div className="nameText">
+                <h4>{loggedInUser.name}</h4>
               </div>
-              <div className="form-actions-row">
-                <button type="submit" className="form-submit-btn">
-                  Save Changes
-                </button>
-                <button
-                  type="button"
-                  className="form-cancel-btn"
-                  onClick={() => setEditingId(null)}
+
+              <div>
+                <div
+                  onClick={() => {
+                    setAddUserPage(true);
+                  }}
+                  style={{ cursor: "pointer" }}
                 >
-                  Discard
-                </button>
+                  <h4>ADD</h4>
+                </div>
               </div>
-            </form>
-          )}
-
-          <div className="users-scroll-window custom-scrollbar">
-            {users.length === 0 ? (
-              <div className="empty-directory-fallback">
-                <p>
-                  No account identities discovered in live database clusters.
-                </p>
+            </div>
+            {!isDashboardClicked && (
+              <div className="textAlignment">
+                <p>Welcome to the dashboard</p>
               </div>
-            ) : (
-              <div className="users-responsive-grid">
-                {users.map((item) => {
-                  const itemAvatarLetter = (item.name || "U")
-                    .trim()
-                    .charAt(0)
-                    .toUpperCase();
-                  const isAdmin = item.role?.toLowerCase() === "admin";
-
-                  return (
-                    <div
-                      key={item._id}
-                      className="user-premium-card animate-fade-in"
-                    >
-                      <div className="card-top-accent"></div>
-
-                      <div className="card-user-info-row">
-                        <div className="card-avatar-wrapper">
+            )}
+            {isDashboardClicked &&
+              loggedInUser.role === "admin" &&
+              (allUser.length == 0 ? (
+                <div className="textAllignment">
+                  <h4>User not found</h4>
+                </div>
+              ) : (
+                <div className="card-grid">
+                  {allUser.map((user) => {
+                    return (
+                      <div className="card" key={user._id}>
+                        <h4>{user.name}</h4>
+                        <h4>{user.emailId}</h4>
+                        <h4>{user.number}</h4>
+                        <h4>{user.role}</h4>
+                        <div className="button-alignment">
                           <div
-                            className={`card-letter-avatar ${isAdmin ? "avatar-admin-gradient" : "avatar-user-gradient"}`}
+                            className="button"
+                            onClick={() => {
+                              setEditingId(user._id);
+                              setEditForm({
+                                name: user.name,
+                                role: user.role,
+                                number: user.number,
+                              });
+                              setModify(true);
+                            }}
                           >
-                            {itemAvatarLetter}
+                            <h4>Modify</h4>
                           </div>
-                          <span
-                            className="live-status-dot green-pulse"
-                            title="System Node Online Connection Valid"
-                          ></span>
-                        </div>
 
-                        <div className="card-identity-text-stack">
-                          <h4 className="card-user-name" title={item.name}>
-                            {item.name}
-                          </h4>
-                          <span
-                            className={`role-badge ${isAdmin ? "badge-admin" : "badge-employee"}`}
+                          <div
+                            className="button"
+                            onClick={() => {
+                              setDeleteAccount(true);
+                              handleDelete(user._id);
+                            }}
                           >
-                            {item.role || "User"}
-                          </span>
+                            <h4>Delete User</h4>
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+              ))}
 
-                      <div className="card-meta-details-body">
-                        <div className="meta-detail-row">
-                          <span className="meta-detail-label">
-                            Network Mailbox ID
-                          </span>
-                          <span
-                            className="meta-detail-value"
-                            title={item.emailId || "No Email"}
-                          >
-                            {item.emailId || "N/A"}
-                          </span>
-                        </div>
-                        <div className="meta-detail-row">
-                          <span className="meta-detail-label">
-                            Hardware Hash Node
-                          </span>
-                          <span className="meta-detail-value code-hash-font">
-                            {item._id ? `${item._id}` : "N/A"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="card-actions-footer">
-                        <button
-                          className="action-btn-pill edit-pill"
-                          onClick={() => startEdit(item)}
-                        >
-                          Modify
-                        </button>
-                        <button
-                          className="action-btn-pill delete-pill"
-                          onClick={() => handleDelete(item._id)}
-                        >
-                          Delete User
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+            {isDashboardClicked && loggedInUser.role === "employee" && (
+              <div className="textAllignment">
+                <h4>You are not allowed to access this</h4>
               </div>
             )}
           </div>
+        </main>
+      </div>
+      {modify && (
+        <div className="modal-overlay" onClick={() => setModify(false)}>
+          <div
+            className="modifyTabFloating"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3>Modify Employee</h3>
+            <form onSubmit={handleModification}>
+              <input
+                type="text"
+                value={editForm.name}
+                placeholder={loggedInUser.name}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    name: e.target.value,
+                  })
+                }
+              ></input>
+              <input
+                type="number"
+                value={editForm.number}
+                placeholder={loggedInUser.number}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    number: e.target.value,
+                  })
+                }
+              ></input>
+              <input type="text" value={newUser.role} readOnly />
+
+              <button type="submit">Save Changes</button>
+              <button
+                type="button"
+                onClick={() => setModify(false)}
+                style={{ height: "40px" }}
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
         </div>
-      </main>
+      )}
+      {addUserPage && (
+        <div className="modal-overlay" onClick={() => setAddUserPage(false)}>
+          <div
+            className="modifyTabFloating"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3>New User</h3>
+            <form onSubmit={handleAddNewUser}>
+              <input
+                type="text"
+                value={newUser.name}
+                placeholder="Enter the name...."
+                onChange={(e) =>
+                  setNewUser({
+                    ...newUser,
+                    name: e.target.value,
+                  })
+                }
+              ></input>
+              <input
+                type="text"
+                value={newUser.emailId}
+                placeholder="Enter the email..."
+                onChange={(e) =>
+                  setNewUser({
+                    ...newUser,
+                    emailId: e.target.value,
+                  })
+                }
+              ></input>
+              <input
+                type="text"
+                value={newUser.password}
+                placeholder="Enter the password..."
+                onChange={(e) =>
+                  setNewUser({
+                    ...newUser,
+                    password: e.target.value,
+                  })
+                }
+              ></input>
+              <input
+                type="number"
+                value={newUser.number}
+                placeholder="Enter the number..."
+                onChange={(e) =>
+                  setNewUser({
+                    ...newUser,
+                    number: e.target.value,
+                  })
+                }
+              ></input>
+              <input type="text" value={newUser.role} readOnly />
+
+              <button type="submit">Save</button>
+              <button
+                type="button"
+                onClick={() => setAddUserPage(false)}
+                style={{ height: "40px" }}
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

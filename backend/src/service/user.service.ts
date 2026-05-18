@@ -1,9 +1,9 @@
 import UserModel, { UserRole } from "../model/user.model.js";
 import jwt from "jsonwebtoken";
 class UserService{
-    static async registerUser(name:String,emailId:String,password:String,role:UserRole){
+    static async registerUser(name:String,emailId:String,password:String,role:UserRole,number:String){
         try{
-            const createUser=new UserModel({name,emailId,password,role});
+            const createUser=new UserModel({name,emailId,password,role,isValidated:1,number});
             return await createUser.save();
         }
         catch(err){
@@ -30,11 +30,11 @@ class UserService{
             throw err;
         }
     }
-    static async updateUser(id:string,name:string,role:UserRole){
+    static async updateUser(id:string,name:string,role:UserRole,number:String){
         try{
             return await UserModel.findOneAndUpdate(
                 {_id:id},
-                {name:name,role:role},
+                {name:name,role:role,number:number},
                 {new:true},
             )
         }
@@ -44,6 +44,9 @@ class UserService{
     }
     static async checkRole(id:string){
         try{
+            if(!id){
+                return null;
+            }
             const user=await UserModel.findById(id).select('role');
             return user ? user.role:null;
         }
@@ -51,6 +54,7 @@ class UserService{
             throw err;
         }
     }
+
     static async getUser(id:string){
         try{
             return await UserModel.findById(id);
@@ -78,6 +82,14 @@ class UserService{
     static async deleteUserWithId(id:string){
         try{
             return await UserModel.deleteOne({_id:id});
+        }
+        catch(err){
+            throw err;
+        }
+    }
+    static async checkEmail(emailId:string){
+        try{
+            return await UserModel.findOne({emailId:emailId}).select('role');
         }
         catch(err){
             throw err;
